@@ -11,3 +11,6 @@
 .error {
 	color: red;
 }
+.design{
+	width: 90%; height: 80%; object-fit: cover;border-radius: 50%;
+}

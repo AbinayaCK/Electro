@@ -22,6 +22,8 @@ import com.ecom.service.OrderService;
 import com.ecom.util.CommonUtil;
 import com.ecom.util.OrderStatus;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -34,43 +36,32 @@ public class OrderServiceImpl implements OrderService {
 	@Autowired
 	private CommonUtil commonUtil;
 
-	@Override
-	public void saveOrder(Integer userid, OrderRequest orderRequest) throws Exception {
 
-		List<Cart> carts = cartRepository.findByUserId(userid);
 
-		for (Cart cart : carts) {
+    @Transactional  // Ensure the entire method runs in a transaction
+    @Override
+    public void saveOrder(Integer userid, OrderRequest orderRequest) throws Exception {
+        List<Cart> carts = cartRepository.findByUserId(userid);
 
-			ProductOrder order = new ProductOrder();
+        for (Cart cart : carts) {
+            ProductOrder order = new ProductOrder();
+            order.setOrderId(UUID.randomUUID().toString());
+            order.setOrderDate(LocalDate.now());
+            order.setProduct(cart.getProduct());
+            order.setPrice(cart.getProduct().getDiscountPrice());
+            order.setQuantity(cart.getQuantity());
+            order.setUser(cart.getUser());
+            order.setStatus(OrderStatus.IN_PROGRESS.getName());
+            order.setPaymentType(orderRequest.getPaymentType());
 
-			order.setOrderId(UUID.randomUUID().toString());
-			order.setOrderDate(LocalDate.now());
+            // Save order
+            ProductOrder saveOrder = orderRepository.save(order);
+        }
 
-			order.setProduct(cart.getProduct());
-			order.setPrice(cart.getProduct().getDiscountPrice());
+        
+        cartRepository.deleteByUserId(userid);
+    }
 
-			order.setQuantity(cart.getQuantity());
-			order.setUser(cart.getUser());
-
-			order.setStatus(OrderStatus.IN_PROGRESS.getName());
-			order.setPaymentType(orderRequest.getPaymentType());
-
-			OrderAddress address = new OrderAddress();
-			address.setFirstName(orderRequest.getFirstName());
-			address.setLastName(orderRequest.getLastName());
-			address.setEmail(orderRequest.getEmail());
-			address.setMobileNo(orderRequest.getMobileNo());
-			address.setAddress(orderRequest.getAddress());
-			address.setCity(orderRequest.getCity());
-			address.setState(orderRequest.getState());
-			address.setPincode(orderRequest.getPincode());
-
-			order.setOrderAddress(address);
-
-			ProductOrder saveOrder = orderRepository.save(order);
-			commonUtil.sendMailForProductOrder(saveOrder, "success");
-		}
-	}
 
 	@Override
 	public List<ProductOrder> getOrdersByUser(Integer userId) {
@@ -106,5 +97,7 @@ public class OrderServiceImpl implements OrderService {
 	public ProductOrder getOrdersByOrderId(String orderId) {
 		return orderRepository.findByOrderId(orderId);
 	}
+	
+	
 
 }

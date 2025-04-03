@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
 	th:replace="~{base::layout(~{::section})}">
 <head>
@@ -44,7 +44,7 @@
 				<p class="text-center fs-4">Category</p>
 				<div class="col-md-2" th:each="c:${category}">
 					<div
-						class="card rounded-circle shadow-sm p-3 mb-5 bg-body-tertiary rounded ">
+						class="card rounded-circle shadow-sm p-3 mb-5 bg-body-tertiary design ">
 						<div class="card-body text-center">
 							<img th:src="@{'img/category_img/'+${c.imageName}}" width="65%" height="140px"><br>
 							<a th:href="@{'/products?category='+${c.name}}" class="text-decoration-none">[[${c.name}]]</a>
@@ -118,7 +118,7 @@
 				<p class="text-center fs-4">Latest Product</p>
 
 				<div class="col-md-3" th:each="p:${products}">
-					<div class="card shadow-sm p-3 mb-5 bg-body-tertiary rounded">
+					<div class="card shadow-sm p-3 mb-5 bg-body-tertiary rounded ">
 						<div class="card-body text-center">
 							<img alt="" th:src="@{'img/product_img/'+${p.image}}" class="" width="65%"
 								height="140px">

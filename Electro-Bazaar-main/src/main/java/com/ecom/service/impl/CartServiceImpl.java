@@ -18,86 +18,67 @@ import com.ecom.service.CartService;
 @Service
 public class CartServiceImpl implements CartService {
 
-	@Autowired
-	private CartRepository cartRepository;
+    @Autowired
+    private CartRepository cartRepository;
 
-	@Autowired
-	private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-	@Autowired
-	private ProductRepository productRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
-	@Override
-	public Cart saveCart(Integer productId, Integer userId) {
+    @Override
+    public Cart saveCart(Integer productId, Integer userId) {
+        UserDtls userDtls = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found!"));
 
-		UserDtls userDtls = userRepository.findById(userId).get();
-		Product product = productRepository.findById(productId).get();
+        Cart cartStatus = cartRepository.findByProductIdAndUserId(productId, userId);
 
-		Cart cartStatus = cartRepository.findByProductIdAndUserId(productId, userId);
+        if (ObjectUtils.isEmpty(cartStatus)) {
+            cartStatus = new Cart();
+            cartStatus.setProduct(product);
+            cartStatus.setUser(userDtls);
+            cartStatus.setQuantity(1);
+            cartStatus.setTotalPrice(1 * product.getDiscountPrice());
+        } else {
+            cartStatus.setQuantity(cartStatus.getQuantity() + 1);
+            cartStatus.setTotalPrice(cartStatus.getQuantity() * cartStatus.getProduct().getDiscountPrice());
+        }
+        return cartRepository.save(cartStatus);
+    }
 
-		Cart cart = null;
+    @Override
+    public List<Cart> getCartsByUser(Integer userId) {
+        List<Cart> carts = cartRepository.findByUserId(userId);
 
-		if (ObjectUtils.isEmpty(cartStatus)) {
-			cart = new Cart();
-			cart.setProduct(product);
-			cart.setUser(userDtls);
-			cart.setQuantity(1);
-			cart.setTotalPrice(1 * product.getDiscountPrice());
-		} else {
-			cart = cartStatus;
-			cart.setQuantity(cart.getQuantity() + 1);
-			cart.setTotalPrice(cart.getQuantity() * cart.getProduct().getDiscountPrice());
-		}
-		Cart saveCart = cartRepository.save(cart);
+        Double totalOrderPrice = carts.stream()
+            .mapToDouble(c -> c.getProduct().getDiscountPrice() * c.getQuantity())
+            .sum();
 
-		return saveCart;
-	}
+        carts.forEach(c -> c.setTotalOrderPrice(totalOrderPrice));
 
-	@Override
-	public List<Cart> getCartsByUser(Integer userId) {
-		List<Cart> carts = cartRepository.findByUserId(userId);
+        return carts;
+    }
 
-		Double totalOrderPrice = 0.0;
-		List<Cart> updateCarts = new ArrayList<>();
-		for (Cart c : carts) {
-			Double totalPrice = (c.getProduct().getDiscountPrice() * c.getQuantity());
-			c.setTotalPrice(totalPrice);
-			totalOrderPrice = totalOrderPrice + totalPrice;
-			c.setTotalOrderPrice(totalOrderPrice);
-			updateCarts.add(c);
-		}
+    @Override
+    public Integer getCountCart(Integer userId) {
+        return cartRepository.countByUserId(userId);
+    }
 
-		return updateCarts;
-	}
+    @Override
+    public void updateQuantity(String sy, Integer cid) {
+        Cart cart = cartRepository.findById(cid)
+                .orElseThrow(() -> new RuntimeException("Cart item not found!"));
 
-	@Override
-	public Integer getCountCart(Integer userId) {
-		Integer countByUserId = cartRepository.countByUserId(userId);
-		return countByUserId;
-	}
+        int updateQuantity = "de".equalsIgnoreCase(sy) ? cart.getQuantity() - 1 : cart.getQuantity() + 1;
 
-	@Override
-	public void updateQuantity(String sy, Integer cid) {
-
-		Cart cart = cartRepository.findById(cid).get();
-		int updateQuantity;
-
-		if (sy.equalsIgnoreCase("de")) {
-			updateQuantity = cart.getQuantity() - 1;
-
-			if (updateQuantity <= 0) {
-				cartRepository.delete(cart);
-			} else {
-				cart.setQuantity(updateQuantity);
-				cartRepository.save(cart);
-			}
-
-		} else {
-			updateQuantity = cart.getQuantity() + 1;
-			cart.setQuantity(updateQuantity);
-			cartRepository.save(cart);
-		}
-
-	}
-
+        if (updateQuantity <= 0) {
+            cartRepository.delete(cart);
+        } else {
+            cart.setQuantity(updateQuantity);
+            cartRepository.save(cart);
+        }
+    }
 }
